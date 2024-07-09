@@ -13,4 +13,4 @@ https://github.com/omidRR/Realyescoinbot-Coinup-CLI/assets/64539596/6219c00d-3a6
 
 ## yescoin coinup site online
 
-https://github.com/omidRR/realyescoinbot-coinup-Blazor
+[realyescoinbot-coinup-Blazor](https://github.com/omidRR/realyescoinbot-coinup-Blazor)
