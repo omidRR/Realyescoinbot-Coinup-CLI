@@ -2,7 +2,7 @@
 
 + Very simple, no need to login telegram
 
-If the program closes, just install NET Runtime 8.0.6
+If the program closes, just install NET Runtime 8
 
 [Download .NET 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
