@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Net.Http.Headers;
 using System.Web;
+using System.Text.Json;
 
 class Program
 {
@@ -11,23 +12,47 @@ class Program
 
     static async Task Main(string[] args)
     {
-        Console.WriteLine("Please enter the URL:");
-        string url = Console.ReadLine();
-        var queryParams = ExtractQueryParams(url);
-
-        while (true)
+        try
         {
-            var tasks = new Task[parallelRequests];
-            for (int i = 0; i < parallelRequests; i++)
+            Console.WriteLine("Please enter the URL or query string:");
+            string input = Console.ReadLine();
+
+            NameValueCollection queryParams;
+            Uri uri = null;
+
+            if (input.StartsWith("http://") || input.StartsWith("https://"))
             {
-                tasks[i] = SendRequest(queryParams);
+                uri = new Uri(input);
+                queryParams = ExtractQueryParamsFromUri(uri);
             }
-            await Task.WhenAll(tasks);
-            DisplayStatus();
+            else
+            {
+                queryParams = HttpUtility.ParseQueryString(input);
+            }
+
+            var timer = new System.Timers.Timer(10000);
+            timer.Elapsed += async (sender, e) => await GetGoldInfo(queryParams, uri);
+            timer.Start();
+
+            while (true)
+            {
+                var tasks = new Task[parallelRequests];
+                for (int i = 0; i < parallelRequests; i++)
+                {
+                    tasks[i] = SendRequest(queryParams, uri);
+                }
+                await Task.WhenAll(tasks);
+                DisplayStatus();
+            }
         }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+       
     }
 
-    private static async Task SendRequest(NameValueCollection queryParams)
+    private static async Task SendRequest(NameValueCollection queryParams, Uri uri)
     {
         try
         {
@@ -43,7 +68,7 @@ class Program
             request.Headers.Add("Accept", "application/json, text/plain, */*");
             request.Headers.Add("accept-language", "en-US");
 
-            string launchParams = queryParams["tgWebAppData"];
+            string launchParams = queryParams["tgWebAppData"] ?? queryParams.ToString();
             request.Headers.Add("launch-params", launchParams);
             request.Headers.Add("origin", "https://miniapp.yesco.in");
             request.Headers.Add("sec-fetch-site", "cross-site");
@@ -76,10 +101,45 @@ class Program
         Console.Write($"\rSuccess: {successCount} | Failure: {failureCount}");
     }
 
-    private static NameValueCollection ExtractQueryParams(string url)
+    private static NameValueCollection ExtractQueryParamsFromUri(Uri uri)
     {
-        var uri = new Uri(url);
-        var query = HttpUtility.ParseQueryString(uri.Fragment.Substring(1));
-        return query;
+        return HttpUtility.ParseQueryString(uri.Fragment.Substring(1));
     }
+
+    private static async Task GetGoldInfo(NameValueCollection queryParams, Uri uri)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://clownfish-app-f7unk.ondigitalocean.app/v2/user/getInfo");
+            request.Headers.Add("accept", "*/*");
+            request.Headers.Add("accept-language", "en-US,en;q=0.9,fa;q=0.8");
+            request.Headers.Add("dnt", "1");
+
+            string launchParams = queryParams["tgWebAppData"] ?? queryParams.ToString();
+            request.Headers.Add("launch-params", launchParams);
+            request.Headers.Add("origin", "https://miniapp.yesco.in");
+            request.Headers.Add("priority", "u=1, i");
+            request.Headers.Add("referer", "https://miniapp.yesco.in/");
+            request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
+
+            var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+            request.Content = content;
+
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var responseString = await response.Content.ReadAsStringAsync();
+
+            var jsonDoc = JsonDocument.Parse(responseString);
+            var goldData = jsonDoc.RootElement.GetProperty("payload").GetProperty("scoreData");
+            var oldGold = goldData.GetProperty("oldGold").GetInt32();
+            var gold = goldData.GetProperty("gold").GetInt32();
+
+            Console.WriteLine($" | Balance==> {gold}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
 }
