@@ -11,7 +11,7 @@ If the program closes, just install NET Runtime 8
 ### Method 1 (Easy)
 
 <details>
-  <summary>How to access realyescoinbot on TDdesktop (Easy method)</summary>
+  <summary>How to access realyescoinbot on Tdesktop (Easy method)</summary>
   
 ```javascript
 copy(Telegram.WebApp.initData)
